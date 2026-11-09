@@ -60,7 +60,7 @@ function layout({ title, active, authed, flash, body }) {
     ${flash ? html`<p class="flash" role="status">${flash}</p>` : ''}
     ${body}
   </main>
-  <footer><p>EuroLeague Fantasy · Kaspar, KJ, MA and ML</p></footer>
+  <footer><p>© 2026 Coca-Cola League. Built with Claude Code</p></footer>
 </body>
 </html>`.text;
 }
