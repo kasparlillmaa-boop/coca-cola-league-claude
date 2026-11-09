@@ -302,3 +302,80 @@ test('pages send security headers', async () => {
     t.close();
   }
 });
+
+// ----- Read-only pages -----
+const r = (number, Kaspar, KJ, MA, ML) => ({ number, scores: { Kaspar, KJ, MA, ML } });
+
+test('empty league shows the table with zeros and a link to add the first round', async () => {
+  const t = await startApp();
+  try {
+    const res = await t.request('/');
+    assert.strictEqual(res.status, 200);
+    assert.match(res.text, /No rounds yet/);
+    assert.match(res.text, /<th scope="row">Kaspar<\/th>/);
+    for (const path of ['/rounds', '/periods']) assert.match((await t.request(path)).text, /No rounds yet/);
+  } finally {
+    t.close();
+  }
+});
+
+test('league page shows the table in order, the latest summary and the tie rule (no login needed)', async () => {
+  const t = await startApp({ store: createFakeStore([r(1, 61, 92, 55, 88), r(2, 100, 50, 60, 70)]) });
+  try {
+    const res = await t.request('/');
+    assert.strictEqual(res.status, 200);
+    const order = [...res.text.matchAll(/<th scope="row">(\w+)<\/th><td class="num">(\d+)</g)].map((m) => `${m[1]}:${m[2]}`);
+    assert.deepStrictEqual(order, ['Kaspar:161', 'ML:158', 'KJ:142', 'MA:115']);
+    assert.match(res.text, /Round 2: Kaspar \(100\) and ML \(70\) win\./);
+    assert.match(res.text, /Ties: if two participants have the same score/);
+    assert.match(res.text, /name="viewport"/);
+  } finally {
+    t.close();
+  }
+});
+
+test('rounds page lists newest first with win/coke labels and edit links', async () => {
+  const t = await startApp({ store: createFakeStore([r(1, 61, 92, 55, 88), r(2, 100, 50, 60, 70)]) });
+  try {
+    const res = await t.request('/rounds');
+    assert.ok(res.text.indexOf('Round 2') < res.text.indexOf('Round 1'));
+    assert.match(res.text, /class="tag win">Wins</);
+    assert.match(res.text, /class="tag coke">Coke</);
+    assert.match(res.text, /href="\/rounds\/2\/edit"/);
+    assert.match(res.text, /Ties: if two participants/);
+  } finally {
+    t.close();
+  }
+});
+
+test('periods page: unfinished period has no marks, finished period does', async () => {
+  const five = [1, 2, 3, 4, 5].map((n) => r(n, 10, 90, 80, 70));
+  const t = await startApp({ store: createFakeStore([...five, r(6, 50, 60, 70, 80)]) });
+  try {
+    const res = await t.request('/periods');
+    const [inProgress, finished] = res.text.split('Period 1');
+    assert.match(inProgress, /In progress \(1 of 5 rounds\)/);
+    assert.doesNotMatch(inProgress, /class="tag/);
+    assert.match(finished, /Finished/);
+    assert.strictEqual((finished.match(/class="tag win"/g) || []).length, 2);
+    assert.strictEqual((finished.match(/class="tag coke"/g) || []).length, 2);
+  } finally {
+    t.close();
+  }
+});
+
+test('the saved round shows up on the pages and a correction changes the table', async () => {
+  const t = await startApp();
+  try {
+    await t.login();
+    await t.request('/rounds/new', { method: 'POST', form: goodForm });
+    const flash = await t.request('/rounds');
+    assert.match(flash.text, /Round 7 saved\./);
+    assert.doesNotMatch((await t.request('/rounds')).text, /Round 7 saved\./); // shown only once
+    await t.request('/rounds/7/edit', { method: 'POST', form: { points_Kaspar: '61', points_KJ: '92', points_MA: '95', points_ML: '88' } });
+    const league = await t.request('/');
+    assert.match(league.text, /<th scope="row">MA<\/th><td class="num">95</);
+  } finally {
+    t.close();
+  }
+});

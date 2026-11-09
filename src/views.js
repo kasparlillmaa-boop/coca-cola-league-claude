@@ -1,7 +1,7 @@
 // HTML pages, written as plain template strings.
 // The html`...` tag escapes every value you put into it, so text typed by a user
 // can never become real HTML (this prevents cross-site scripting).
-const { PARTICIPANTS, MAX_ROUND, MAX_POINTS } = require('./rules');
+const { PARTICIPANTS, MAX_ROUND, MAX_POINTS, TIE_RULE_TEXT } = require('./rules');
 
 class Raw {
   constructor(text) {
@@ -117,4 +117,85 @@ function deleteConfirmPage(round) {
     <p><a href="/rounds">No, keep it</a></p>`;
 }
 
-module.exports = { html, Raw, layout, messagePage, loginPage, roundForm, deleteConfirmPage };
+// ----- Read-only pages -----
+
+const tieNote = () => html`<p class="note">${TIE_RULE_TEXT}</p>`;
+
+// Text label as well as colour, so the result is clear without relying on colour.
+function resultTag(result) {
+  if (result === 'win') return html`<span class="tag win">Wins</span>`;
+  if (result === 'coke') return html`<span class="tag coke">Coke</span>`;
+  return '';
+}
+
+// analysis = the output of analyze() in rules.js
+function leaguePage(analysis) {
+  const latest = analysis.rounds[analysis.rounds.length - 1];
+  return html`<h2>League table</h2>
+    ${analysis.rounds.length === 0
+      ? html`<p>No rounds yet. <a href="/rounds/new">Add the first round.</a></p>`
+      : ''}
+    <table>
+      <caption class="sr-only">League table, ranked by total points</caption>
+      <thead><tr><th scope="col">#</th><th scope="col">Name</th><th scope="col" class="num">Total</th><th scope="col" class="num">Wins</th><th scope="col" class="num">Cokes</th></tr></thead>
+      <tbody>
+        ${analysis.table.map(
+          (row) => html`<tr><td>${row.rank}</td><th scope="row">${row.name}</th><td class="num">${row.total}</td><td class="num">${row.wins}</td><td class="num">${row.cokes}</td></tr>`
+        )}
+      </tbody>
+    </table>
+    <p class="note">Ranked by total points over all complete rounds. Wins = rounds in the best two. Cokes = rounds in the lowest two, which means bringing the Coca-Cola.</p>
+    ${latest
+      ? html`<section class="card"><h3>Latest round</h3><p class="summary">${latest.summary}</p><p><a href="/rounds#round-${latest.number}">See round ${latest.number}</a></p></section>`
+      : ''}
+    ${tieNote()}`;
+}
+
+function roundsPage(analysis) {
+  const rounds = [...analysis.rounds].reverse(); // newest first
+  return html`<h2>Rounds</h2>
+    ${rounds.length === 0 ? html`<p>No rounds yet. <a href="/rounds/new">Add the first round.</a></p>` : ''}
+    ${rounds.map(
+      (r) => html`<section class="card" id="round-${r.number}">
+        <h3>Round ${r.number} <small>Period ${r.period}</small></h3>
+        <table>
+          <caption class="sr-only">Results of round ${r.number}</caption>
+          <thead><tr><th scope="col">#</th><th scope="col">Name</th><th scope="col" class="num">Points</th><th scope="col">Result</th></tr></thead>
+          <tbody>
+            ${r.ranking.map((e) => html`<tr class="${e.result}"><td>${e.rank}</td><th scope="row">${e.name}</th><td class="num">${e.points}</td><td>${resultTag(e.result)}</td></tr>`)}
+          </tbody>
+        </table>
+        <p class="summary">${r.summary}</p>
+        <p class="actions">
+          <a class="button secondary" href="/rounds/${r.number}/edit">Edit</a>
+          <a class="button secondary" href="/rounds/${r.number}/delete">Delete</a>
+        </p>
+      </section>`
+    )}
+    ${tieNote()}`;
+}
+
+function periodsPage(analysis) {
+  const periods = [...analysis.periods].reverse(); // newest first
+  return html`<h2>Periods</h2>
+    <p class="note">Every five rounds form one period (rounds 1–5, 6–10, …). When all five rounds are in, the two best win the period and the two lowest bring the Coca-Cola.</p>
+    ${periods.length === 0 ? html`<p>No rounds yet. <a href="/rounds/new">Add the first round.</a></p>` : ''}
+    ${periods.map(
+      (p) => html`<section class="card">
+        <h3>Period ${p.number} <small>rounds ${p.firstRound}–${p.lastRound}</small></h3>
+        <p class="status ${p.finished ? 'done' : ''}">${p.finished ? 'Finished' : `In progress (${p.roundsDone} of 5 rounds)`}</p>
+        <table>
+          <caption class="sr-only">Standings of period ${p.number}</caption>
+          <thead><tr><th scope="col">#</th><th scope="col">Name</th><th scope="col" class="num">Total</th>${p.finished ? html`<th scope="col">Result</th>` : ''}</tr></thead>
+          <tbody>
+            ${p.standings.map(
+              (s) => html`<tr class="${s.result || ''}"><td>${s.rank}</td><th scope="row">${s.name}</th><td class="num">${s.total}</td>${p.finished ? html`<td>${resultTag(s.result)}</td>` : ''}</tr>`
+            )}
+          </tbody>
+        </table>
+      </section>`
+    )}
+    ${tieNote()}`;
+}
+
+module.exports = { html, Raw, layout, messagePage, loginPage, roundForm, deleteConfirmPage, leaguePage, roundsPage, periodsPage };

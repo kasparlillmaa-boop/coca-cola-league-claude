@@ -3,7 +3,7 @@
 const path = require('path');
 const express = require('express');
 const cookieSession = require('cookie-session');
-const { PARTICIPANTS, MAX_ROUND } = require('./rules');
+const { PARTICIPANTS, MAX_ROUND, analyze } = require('./rules');
 const { validateRoundForm, parseRoundNumber } = require('./validate');
 const { RoundExistsError, RoundNotFoundError } = require('./store');
 const { passwordMatches, safeNext, createLoginGuard } = require('./auth');
@@ -59,8 +59,21 @@ function createApp({ store, config }) {
   // Railway can use this to check that the app is alive. It never touches the database.
   app.get('/healthz', (req, res) => res.type('text').send('ok'));
 
-  app.get('/', (req, res) => {
-    send(req, res, 200, { title: 'League', active: 'league', body: views.messagePage('League', 'The league table is coming in the next step.') });
+  // ----- Read-only pages (everyone can see them) -----
+  // Each request loads the rounds and calculates everything fresh with analyze().
+  app.get('/', async (req, res) => {
+    const analysis = analyze(await store.getRounds());
+    send(req, res, 200, { title: 'League', active: 'league', body: views.leaguePage(analysis) });
+  });
+
+  app.get('/rounds', async (req, res) => {
+    const analysis = analyze(await store.getRounds());
+    send(req, res, 200, { title: 'Rounds', active: 'rounds', body: views.roundsPage(analysis) });
+  });
+
+  app.get('/periods', async (req, res) => {
+    const analysis = analyze(await store.getRounds());
+    send(req, res, 200, { title: 'Periods', active: 'periods', body: views.periodsPage(analysis) });
   });
 
   // ----- Login -----

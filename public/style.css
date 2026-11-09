@@ -90,3 +90,35 @@ input:focus-visible, .button:focus-visible, nav a:focus-visible, .link-button:fo
 .flash { background: var(--win-bg); border-left: 6px solid var(--win); padding: 0.5rem 1rem; border-radius: 4px; }
 
 ul.plain { list-style: none; padding: 0; }
+
+/* Tables: they must fit a phone screen without sideways scrolling. */
+table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+th, td { padding: 0.6rem 0.4rem; text-align: left; border-bottom: 1px solid var(--line); font-size: 1rem; }
+thead th { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0; }
+tbody th { font-weight: 600; }
+tbody tr:last-child > * { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr.win { background: var(--win-bg); }
+tr.coke { background: var(--coke-bg); }
+
+.tag { display: inline-block; padding: 0.1rem 0.6rem; border-radius: 999px; font-size: 0.9rem; font-weight: 700; }
+.tag.win { background: var(--win); color: #fff; }
+.tag.coke { background: var(--red); color: #fff; }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 0.75rem 1rem 0.25rem; margin: 1rem 0; }
+.card h3 { margin: 0.25rem 0 0.5rem; font-size: 1.2rem; }
+.card h3 small { font-weight: 400; color: var(--muted); font-size: 0.9rem; }
+.card table { border: 0; }
+.summary { margin: 0.75rem 0; }
+.actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.actions .button { margin-top: 0; }
+.status { margin: 0 0 0.5rem; font-weight: 600; color: var(--muted); }
+.status.done { color: var(--win); }
+.note { color: var(--muted); font-size: 0.95rem; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (min-width: 600px) {
+  header { padding: 0.75rem 2rem 0.25rem; }
+  header h1 { font-size: 1.6rem; }
+}
