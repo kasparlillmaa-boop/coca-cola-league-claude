@@ -5,7 +5,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const root = path.join(__dirname, '..');
-const folders = ['src', 'scripts', 'test'];
+const folders = ['src', 'scripts', 'test', 'test-support'];
 
 function listJsFiles(dir) {
   if (!fs.existsSync(dir)) return [];
